@@ -1,10 +1,7 @@
 {
-  "//": "Example: wrap an MCP server with mcpobserve. The client launches one",
-  "//2": "process (mcpobserve) and talks stdio to it; mcpobserve runs the real",
-  "//3": "server underneath and exposes metrics at http://127.0.0.1:9464/metrics.",
   "mcpServers": {
     "filesystem": {
-      "command": "mcpobserve",
+      "command": "/usr/local/bin/mcpobserve",
       "args": [
         "--metrics-addr", "127.0.0.1:9464",
         "--",

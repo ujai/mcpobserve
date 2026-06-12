@@ -8,6 +8,7 @@
 package metrics
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sort"
@@ -183,10 +184,23 @@ func cloneLabels(in map[string]string) map[string]string {
 }
 
 // WritePrometheus writes all series in the Prometheus text exposition format.
+// The registry lock is held only while rendering into a memory buffer, never
+// while writing to w — a slow scraper must not block metric updates (which run
+// synchronously on the relay path).
 func (r *Registry) WritePrometheus(w io.Writer) error {
+	var buf bytes.Buffer
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	err := r.render(&buf)
+	r.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(buf.Bytes())
+	return err
+}
 
+// render writes the exposition text. Callers must hold r.mu.
+func (r *Registry) render(w io.Writer) error {
 	// Gather metric names and emit HELP/TYPE once per name, grouped.
 	names := make([]string, 0, len(r.meta))
 	for n := range r.meta {
@@ -197,7 +211,7 @@ func (r *Registry) WritePrometheus(w io.Writer) error {
 	for _, name := range names {
 		m := r.meta[name]
 		typeStr := map[metricType]string{typeCounter: "counter", typeGauge: "gauge", typeHistogram: "histogram"}[m.typ]
-		if _, err := fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s %s\n", name, m.help, name, typeStr); err != nil {
+		if _, err := fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s %s\n", name, escapeHelp(m.help), name, typeStr); err != nil {
 			return err
 		}
 		switch m.typ {
@@ -295,6 +309,12 @@ func formatLabels(labels map[string]string) string {
 	}
 	b.WriteByte('}')
 	return b.String()
+}
+
+func escapeHelp(v string) string {
+	v = strings.ReplaceAll(v, `\`, `\\`)
+	v = strings.ReplaceAll(v, "\n", `\n`)
+	return v
 }
 
 func escapeLabelValue(v string) string {

@@ -3,6 +3,7 @@ package metrics
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCounterAndGauge(t *testing.T) {
@@ -61,5 +62,34 @@ func TestLabelEscaping(t *testing.T) {
 	_ = r.WritePrometheus(&sb)
 	if !strings.Contains(sb.String(), `k="a\"b\\c"`) {
 		t.Fatalf("label not escaped:\n%s", sb.String())
+	}
+}
+
+// slowWriter simulates a slow scraper draining /metrics.
+type slowWriter struct{ delay time.Duration }
+
+func (s slowWriter) Write(p []byte) (int, error) {
+	time.Sleep(s.delay)
+	return len(p), nil
+}
+
+// A slow scrape must not hold the registry lock: metric updates run
+// synchronously on the proxy's relay path and must never wait on a scraper.
+func TestWritePrometheusDoesNotBlockUpdates(t *testing.T) {
+	r := New()
+	r.IncCounter("test_total", "help", map[string]string{"a": "b"})
+
+	started := make(chan struct{})
+	go func() {
+		close(started)
+		_ = r.WritePrometheus(slowWriter{delay: 500 * time.Millisecond})
+	}()
+	<-started
+	time.Sleep(50 * time.Millisecond) // let WritePrometheus reach the slow Write
+
+	t0 := time.Now()
+	r.IncCounter("test_total", "help", map[string]string{"a": "b"})
+	if elapsed := time.Since(t0); elapsed > 250*time.Millisecond {
+		t.Errorf("counter update blocked %v behind a slow scraper", elapsed)
 	}
 }

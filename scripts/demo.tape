@@ -18,7 +18,7 @@ Sleep 1s
 
 # Keep stdin open after the request so the proxy (and its /metrics endpoint)
 # stays alive while we scrape it.
-Type `(echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"echo","arguments":{"text":"hi"}}}'; sleep 12) | ./bin/mcpobserve -q -- ./bin/fakeserver &`
+Type `(echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{"query":"hi"}}}'; sleep 12) | ./bin/mcpobserve -q -- ./bin/fakeserver &`
 Enter
 Sleep 2.5s
 
