@@ -342,3 +342,16 @@ func TestRelayReassemblesMultiChunkLine(t *testing.T) {
 		t.Errorf("reassembled line failed to parse:\n%s", m)
 	}
 }
+
+// zeroWriter models a pathological writer that returns (0, nil) — legal-looking
+// but contract-breaking. writeAll must fail fast instead of spinning forever.
+type zeroWriter struct{}
+
+func (zeroWriter) Write([]byte) (int, error) { return 0, nil }
+
+func TestWriteAllRejectsZeroProgressWriter(t *testing.T) {
+	err := writeAll(zeroWriter{}, []byte("payload"))
+	if err != io.ErrShortWrite {
+		t.Errorf("writeAll on zero-progress writer: err = %v, want io.ErrShortWrite", err)
+	}
+}

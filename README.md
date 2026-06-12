@@ -98,7 +98,7 @@ The metrics address also serves a liveness probe at `/healthz`.
 | `mcp_abandoned_requests_total` | counter | `server` | Requests still awaiting a response when the session ended. |
 | `mcp_dropped_correlations_total` | counter | `dir` | Requests forwarded but not correlated because the pending-request cap (10,000) was hit. |
 
-A note on label cardinality, because SREs will rightly ask: `method` and `tool` values come from the observed traffic. Method names are drawn from MCP's small protocol surface, but tool names are defined by the wrapped server, so the practical cardinality is "however many tools your server exposes" — low for every normal server, but not enforced to be. What *is* enforced: messages beyond the parse cap are never labeled, the correlation map is hard-capped, and you choose which servers to wrap. If you wrap a server you don't trust to keep its tool list sane, watch `mcp_requests_total` series growth.
+A note on label cardinality, because SREs will rightly ask: `method` and `tool` values come from the observed traffic. Method names are normally drawn from MCP's small protocol surface, but tool names are defined by the wrapped server, so the practical cardinality is "however many tools your server exposes" — low for every normal server, but not enforced to be. What *is* enforced: messages beyond the parse cap are never labeled, the correlation map is hard-capped, and you choose which servers to wrap. If you wrap a server you don't trust to keep its tool list sane, watch `mcp_requests_total` series growth.
 
 ### Grafana dashboard
 

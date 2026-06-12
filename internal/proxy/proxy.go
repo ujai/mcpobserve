@@ -242,6 +242,9 @@ func writeAll(w io.Writer, b []byte) error {
 		if err != nil {
 			return err
 		}
+		if n == 0 {
+			return io.ErrShortWrite
+		}
 		b = b[n:]
 	}
 	return nil
