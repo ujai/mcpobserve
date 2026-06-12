@@ -93,6 +93,20 @@ The metrics address also serves a liveness probe at `/healthz`.
 
 Label cardinality is bounded by design — `tool` and `method` come from a finite protocol surface, never from free-form input.
 
+### Grafana dashboard
+
+A ready-made dashboard covering all of the above (rates, error %, p50/p95/p99 latency, in-flight requests, protocol anomalies) ships at [`examples/grafana/mcpobserve-dashboard.json`](examples/grafana/mcpobserve-dashboard.json). Import it in Grafana (**Dashboards → New → Import**), point it at your Prometheus datasource, done.
+
+## What it observes — and what it never logs
+
+This tool sits on a stream that can carry sensitive data, so the boundary is explicit:
+
+**Observed (metrics + event log):** JSON-RPC method names, tool names, request ids, error codes, message sizes, timings, direction, and child process lifecycle events. All of it is protocol metadata.
+
+**Never recorded anywhere:** tool call *arguments*, tool *results*, resource contents, prompts, sampling messages — the payload. Payload bytes are forwarded verbatim and parsed only in memory to extract the metadata above; they are never written to the metrics endpoint, the event log, or disk.
+
+**Never transmitted:** nothing leaves your machine. There is no telemetry, no update check, no outbound connection of any kind. The only network surface is the metrics listener you configure, bound to loopback by default.
+
 ## Design notes
 
 - **Transparency first.** Raw bytes are forwarded *before* they're parsed. A parse failure, an unknown method, or a malformed line is counted and ignored — it can never corrupt or stall the stream.
@@ -105,7 +119,7 @@ Label cardinality is bounded by design — `tool` and `method` come from a finit
 v0.1 is intentionally small and solid. Planned next, roughly in order:
 
 - [ ] Native **OTLP trace export** (one span per request, OTel GenAI semantic conventions) so MCP calls show up alongside the rest of your traces.
-- [ ] A ready-made **Grafana dashboard** JSON.
+- [x] A ready-made **Grafana dashboard** JSON — shipped at [`examples/grafana/mcpobserve-dashboard.json`](examples/grafana/mcpobserve-dashboard.json).
 - [ ] **Streamable HTTP / SSE** transport support (v0.1 covers stdio, the common local case).
 - [ ] Token/cost attribution where the server surfaces usage.
 - [ ] Optional **per-tool argument shape** sampling (privacy-preserving) for capability mapping.
